@@ -1,0 +1,42 @@
+services:
+  mysql-pago:
+    image: mysql:8.0
+    container_name: mysql-pago
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pagodb}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "${MYSQL_PORT:-3312}:3306"
+    volumes:
+      - mysql_pago_data:/var/lib/mysql
+    networks:
+      - pasteleria-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ms-pago:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-pago
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8084}:${SERVER_PORT:-8084}"
+    env_file:
+      - .env
+    depends_on:
+      mysql-pago:
+        condition: service_healthy
+    networks:
+      - pasteleria-network
+
+networks:
+  pasteleria-network:
+    external: true
+
+volumes:
+  mysql_pago_data:
